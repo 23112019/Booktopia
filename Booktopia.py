@@ -1,26 +1,38 @@
+# Databricks notebook source
 import random
-import numpy as np
-import requests
 import time
-from selenium.webdriver.common.by import By
-import pandas as pd
-from selenium import webdriver
-from bs4 import BeautifulSoup
 
+import numpy as np
+import pandas as pd
+import requests
+from bs4 import BeautifulSoup
 
 def get_site_data(hit_input):
     try:
-        chrome_options = webdriver.ChromeOptions()
-        chrome_options.add_argument("--incognito")
-        # chrome_options.add_argument("--headless")
-        input_url = "https://www.booktopia.com.au/safe-haven-shankari-chandran/book/"+str(hit_input)+".html"
-        driver = webdriver.Chrome(r'chromedriver.exe',chrome_options=chrome_options)
-        driver.get(input_url)
-        time.sleep(2)
-        page_data = driver.page_source
-        return page_data
+        headers = {
+            'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+            'accept-language': 'en-US,en;q=0.9',
+            # 'cache-control': 'max-age=0',
+            # 'priority': 'u=0, i',
+            # 'sec-ch-ua': '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
+            # 'sec-ch-ua-mobile': '?0',
+            'sec-ch-ua-platform': '"Windows"',
+            # 'sec-fetch-dest': 'document',
+            # 'sec-fetch-mode': 'navigate',
+            # 'sec-fetch-site': 'same-origin',
+            # 'sec-fetch-user': '?1',
+            # 'upgrade-insecure-requests': '1',
+            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        }
+
+        response = requests.get(
+            'https://www.booktopia.com.au/safe-haven-shankari-chandran/book/'+str(hit_input)+'.html',
+            headers=headers,
+        )
+        return response
+
     except:
-        "Data Not Found"
+        return 'Data Not Found'
 
 def get_parsing_data(main_data,single_dict):
     try:
@@ -65,28 +77,29 @@ def get_csv_file(final_data):
     except:
         return 'file not out'
 
+
 if __name__ == "__main__":
     final_data = []
     read_input_file = pd.read_csv('input_list.csv').replace(np.nan,'')
     for i,row in read_input_file.iterrows():
-
         print('Total_input:-',len(read_input_file),' --------------- | ----------- ','Running:-',int(i)+1)
-
         single_dict = {}
         hit_input = row[0]
-        if hit_input !='':
+        if hit_input != '':
             hit_input = int(hit_input)
-        print(hit_input)
         single_dict['ISBN'] = hit_input
         try:
             time.sleep(random.randint(1,2))
             Hit_site = get_site_data(hit_input)
+            Hit_site = Hit_site.text
         except:
+
             try:
                 for i in range(1,3):
                     time.sleep(random.randint(1,2))
                     Hit_site = get_site_data(hit_input)
-                    if Hit_site != 'Data Not Found':
+                    if Hit_site != 'Data Not Found' or Hit_site.status_code == 200 :
+                        Hit_site = Hit_site.text
                         break
             except:
                 final_data.append(single_dict)
@@ -96,7 +109,8 @@ if __name__ == "__main__":
             parsing_data = get_parsing_data(main_data,single_dict)
             final_data.append(parsing_data)
         except:
-            final_data.append(single_dict)
+            pass
 
 final_csv_out = get_csv_file(final_data)
 print(final_csv_out)
+
